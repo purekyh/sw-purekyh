@@ -259,14 +259,12 @@ window._loadFavs = loadFavs;
 </div>
 
 <div class="header">
-  <div class="logo">⚔ 점령전 족보</div>
+  <div class="logo">⚔ 점령전 족보 <span style="font-size:10px;font-weight:500;color:var(--dim);margin-left:4px;" id="ver-display"></span></div>
   <div class="tier-tabs">
     <div class="tier-tab active" onclick="setTier(4,this)">4성대전</div>
     <div class="tier-tab" onclick="setTier(5,this)">5성대전</div>
   </div>
   <div class="header-btns">
-    <button class="btn-io" onclick="exportDB()">내보내기</button>
-    <label class="btn-io" style="cursor:pointer">불러오기<input type="file" accept=".json" style="display:none" onchange="importDB(event)"></label>
     <span class="user-badge" id="user-badge" onclick="if(confirm('로그아웃 할까요?'))logout()" style="cursor:pointer" title="클릭하면 로그아웃"></span><button class="add-top" onclick="openModal()">+ 추가</button>
   </div>
 </div>
@@ -781,6 +779,9 @@ function del(id){
 }
 
 window.onload=()=>{
+  // 버전 표시
+  const vd = document.getElementById('ver-display');
+  if(vd) vd.textContent = PATCH_VERSION;
   loadDB();
   const savedNick = localStorage.getItem('sw-nick');
   if(savedNick){
