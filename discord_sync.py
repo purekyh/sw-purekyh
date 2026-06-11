@@ -14,10 +14,9 @@ EXCLUDE_KEYWORDS = ['옛날', '공지', '공유', '속연계', '프리셋', '로
 def get(url):
     while True:
         try:
-            req = urllib.request.Request(url, headers={
-                "Authorization": "Bot " + TOKEN,
-                "User-Agent": "DiscordBot (https://github.com, 1.0)"
-            })
+            req = urllib.request.Request(url)
+            req.add_unredirected_header("Authorization", "Bot " + TOKEN)
+            req.add_unredirected_header("User-Agent", "DiscordBot (https://github.com, 1.0)")
             with urllib.request.urlopen(req, timeout=30) as res:
                 return json.loads(res.read().decode('utf-8'))
         except urllib.error.HTTPError as e:
