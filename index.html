@@ -415,6 +415,7 @@ function startWithNick(){
   }
   window._renderReady = true;
   render();
+  setTimeout(showPatchIfNew, 300);
 }
 
 function exportDB(){
@@ -633,8 +634,11 @@ window.onload=()=>{
     document.getElementById('user-badge').textContent = '👤 '+savedNick;
     if(window._loadFavs) setTimeout(()=>window._loadFavs(), 500);
     window._renderReady = true;
+    render();
+    setTimeout(showPatchIfNew, 300);
+  } else {
+    render();
   }
-  render();
 };
 </script>
 </body>
