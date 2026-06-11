@@ -1,0 +1,26 @@
+name: Discord Jokbo Sync
+
+on:
+  schedule:
+    - cron: '0 15 * * *'  # 매일 자정 (KST = UTC+9, 15:00 UTC)
+  workflow_dispatch:  # 수동 실행도 가능
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run Discord fetch
+        env:
+          DISCORD_TOKEN: ${{ secrets.DISCORD_TOKEN }}
+          FIREBASE_URL: ${{ secrets.FIREBASE_URL }}
+        run: python discord_sync.py
