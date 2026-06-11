@@ -274,20 +274,16 @@ window._loadFavs = loadFavs;
     </div>
     <div class="patch-body">
       <div class="patch-item">
-        <div class="patch-icon">🍗</div>
-        <div class="patch-text"><strong>바코드 치킨각이닭.</strong><br>1등해주어어어~</div>
+        <div class="patch-icon">🔐</div>
+        <div class="patch-text"><strong>가입 신청 / 승인 / 강퇴 시스템 추가</strong><br>웅장한 바코드인만 접근 가능!</div>
       </div>
       <div class="patch-item">
-        <div class="patch-icon">⭐</div>
-        <div class="patch-text"><strong>순수영이 노안이라 도와주어요오.</strong><br>족보 사이트 오픈! 실시간 공유 시작.</div>
+        <div class="patch-icon">⚠️</div>
+        <div class="patch-text"><strong>길탈 시 or 순수영이 기분에 따라</strong><br>접근 권한이 회수될 수 있음 -_-</div>
       </div>
       <div class="patch-item">
-        <div class="patch-icon">📋</div>
-        <div class="patch-text">4성/5성 공격족보 <strong>225개</strong> 등록</div>
-      </div>
-      <div class="patch-item">
-        <div class="patch-icon">🔥</div>
-        <div class="patch-text">실시간 동기화, 즐겨찾기, 계정별 관리 지원</div>
+        <div class="patch-icon">📱</div>
+        <div class="patch-text"><strong>앱 설치 지원</strong><br>홈 화면에 추가하면 앱처럼 사용 가능!</div>
       </div>
     </div>
     <div class="patch-footer">
@@ -400,24 +396,83 @@ function loadDB(){
   DB=INIT.map(d=>({...d}));
 }
 
-// 닉네임 시작
+// 가입 신청 시스템
 function startWithNick(){
   const nick = document.getElementById('nick-input').value.trim();
   if(!nick){ alert('닉네임을 입력해주세요.'); return; }
-  window.NICK = nick;
-  localStorage.setItem('sw-nick', nick);
-  document.getElementById('nick-screen').style.display='none';
-  document.getElementById('user-badge').textContent = '👤 '+nick;
-  // Firebase에 접속 기록
-  if(window._fbReady){
-    const loginRef = window._fbRef(window._fbDb, 'users/'+nick);
-    window._fbSet(loginRef, { nick, lastSeen: Date.now() });
-    // 즐겨찾기 로드
-    if(window._loadFavs) window._loadFavs();
+  if(nick.length > 12){ alert('닉네임은 12자 이내로 입력해주세요.'); return; }
+
+  // Firebase에서 상태 확인
+  if(!window._fbReady){
+    alert('서버 연결 중입니다. 잠시 후 다시 시도해주세요.');
+    return;
   }
-  window._renderReady = true;
-  render();
-  setTimeout(showPatchIfNew, 300);
+
+  const approvedRef = window._fbRef(window._fbDb, 'approved/' + nick);
+  window._fbOnValue(approvedRef, (snapshot) => {
+    if(snapshot.exists()){
+      // 승인된 사용자
+      window.NICK = nick;
+      localStorage.setItem('sw-nick', nick);
+      document.getElementById('nick-screen').style.display='none';
+      document.getElementById('user-badge').textContent = '👤 '+nick;
+      window._fbSet(window._fbRef(window._fbDb, 'approved/'+nick+'/lastSeen'), Date.now());
+      if(window._loadFavs) window._loadFavs();
+      window._renderReady = true;
+      render();
+      setTimeout(showPatchIfNew, 300);
+    } else {
+      // 승인 안 된 경우 - pending 확인
+      const pendingRef = window._fbRef(window._fbDb, 'pending/' + nick);
+      window._fbOnValue(pendingRef, (snap) => {
+        if(snap.exists()){
+          showWaiting(nick);
+        } else {
+          // 신규 신청
+          window._fbSet(pendingRef, { nick, requestedAt: Date.now() });
+          showWaiting(nick);
+        }
+      }, {onlyOnce: true});
+    }
+  }, {onlyOnce: true});
+}
+
+function showWaiting(nick){
+  document.getElementById('nick-screen').innerHTML = `
+    <div class="nick-box">
+      <div class="nick-logo">⏳</div>
+      <div class="nick-title">가입 승인 대기 중</div>
+      <div class="nick-sub" style="margin-bottom:20px">
+        <b>${nick}</b> 님의 가입 신청이 접수됐어요.<br>
+        관리자 승인 후 이용 가능해요.
+      </div>
+      <button class="nick-btn" onclick="checkApproval('${nick}')">승인 확인</button>
+      <button class="nick-btn" style="background:var(--bg3);color:var(--dim);border:1px solid var(--border2);margin-top:8px" onclick="resetNick()">다른 닉네임으로</button>
+    </div>`;
+}
+
+function checkApproval(nick){
+  if(!window._fbReady) return;
+  const ref = window._fbRef(window._fbDb, 'approved/' + nick);
+  window._fbOnValue(ref, (snap) => {
+    if(snap.exists()){
+      window.NICK = nick;
+      localStorage.setItem('sw-nick', nick);
+      document.getElementById('nick-screen').style.display='none';
+      document.getElementById('user-badge').textContent = '👤 '+nick;
+      if(window._loadFavs) window._loadFavs();
+      window._renderReady = true;
+      render();
+      setTimeout(showPatchIfNew, 300);
+    } else {
+      alert('아직 승인되지 않았어요. 잠시 후 다시 확인해주세요.');
+    }
+  }, {onlyOnce: true});
+}
+
+function resetNick(){
+  localStorage.removeItem('sw-nick');
+  location.reload();
 }
 
 function exportDB(){
@@ -515,7 +570,7 @@ function render(){
 }
 
 // 패치노트
-const PATCH_VERSION = 'v26.06.11';
+const PATCH_VERSION = 'v26.06.11b';
 function showPatchIfNew(){
   const seen = localStorage.getItem('sw-patch');
   if(seen !== PATCH_VERSION){
@@ -631,17 +686,40 @@ window.onload=()=>{
   loadDB();
   const savedNick = localStorage.getItem('sw-nick');
   if(savedNick){
-    window.NICK = savedNick;
-    document.getElementById('nick-screen').style.display='none';
-    document.getElementById('user-badge').textContent = '👤 '+savedNick;
-    if(window._loadFavs) setTimeout(()=>window._loadFavs(), 500);
-    window._renderReady = true;
-    render();
-    setTimeout(showPatchIfNew, 300);
+    // 저장된 닉네임 있으면 승인 여부 재확인
+    setTimeout(()=>{
+      if(!window._fbReady){ 
+        // Firebase 아직 안 됐으면 잠깐 기다렸다가 재시도
+        setTimeout(()=>checkSavedNick(savedNick), 1500);
+        return;
+      }
+      checkSavedNick(savedNick);
+    }, 800);
   } else {
     render();
   }
 };
+
+function checkSavedNick(nick){
+  if(!window._fbReady){ render(); return; }
+  const ref = window._fbRef(window._fbDb, 'approved/' + nick);
+  window._fbOnValue(ref, (snap) => {
+    if(snap.exists()){
+      window.NICK = nick;
+      document.getElementById('nick-screen').style.display='none';
+      document.getElementById('user-badge').textContent = '👤 '+nick;
+      if(window._loadFavs) window._loadFavs();
+      window._renderReady = true;
+      render();
+      setTimeout(showPatchIfNew, 300);
+    } else {
+      // 강퇴됐거나 미승인
+      localStorage.removeItem('sw-nick');
+      render();
+      showWaiting(nick);
+    }
+  }, {onlyOnce: true});
+}
 </script>
 
 <!-- PWA -->
