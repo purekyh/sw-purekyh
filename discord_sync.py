@@ -1,55 +1,63 @@
 """
-점령전 족보 디스코드 자동 동기화 v5
+점령전 족보 디스코드 자동 동기화 v6
+curl subprocess 사용 - latin-1 완전 우회
 """
-import json, time, re, os, sys
-
-# 인코딩 강제 설정
-os.environ['PYTHONIOENCODING'] = 'utf-8'
+import json, time, re, os, subprocess
 
 TOKEN = os.environ['DISCORD_TOKEN']
 FIREBASE_URL = os.environ['FIREBASE_URL']
 GUILD_ID = "1409399655393005641"
 
-import requests
-# requests Session에서 헤더 인코딩 우회
-session = requests.Session()
-session.headers.clear()
+EXCLUDE = ['옛날','공지','공유','속연계','프리셋','로테','방덱','리스트','연습','일반','프로젝트','정복']
 
-def get(url):
+def discord_get(path):
+    """curl로 디스코드 API 호출"""
     while True:
         try:
-            # 헤더를 PreparedRequest로 직접 설정
-            req = requests.Request('GET', url)
-            prepared = req.prepare()
-            prepared.headers['Authorization'] = 'Bot ' + TOKEN
-            prepared.headers['User-Agent'] = 'python/3'
+            result = subprocess.run([
+                'curl', '-s', '-w', '\n%{http_code}',
+                '-H', f'Authorization: Bot {TOKEN}',
+                '-H', 'User-Agent: python-bot',
+                f'https://discord.com/api/v10{path}'
+            ], capture_output=True, timeout=30)
             
-            res = session.send(prepared, timeout=30)
-            if res.status_code == 429:
-                wait = res.json().get("retry_after", 1)
+            output = result.stdout.decode('utf-8')
+            lines = output.rsplit('\n', 1)
+            body = lines[0]
+            status = int(lines[1]) if len(lines) > 1 else 0
+            
+            if status == 429:
+                data = json.loads(body)
+                wait = data.get("retry_after", 1)
                 print(f"  rate limit {wait:.1f}초 대기...")
                 time.sleep(float(wait) + 0.5)
                 continue
-            if res.status_code in (403, 404):
+            if status in (403, 404, 0):
                 return None
-            return res.json()
+            return json.loads(body)
         except Exception as ex:
             print(f"  오류: {ex}")
             return None
 
 def firebase_get(path):
     try:
-        r = requests.get(f"{FIREBASE_URL}/{path}.json", timeout=30)
-        return r.json()
+        result = subprocess.run([
+            'curl', '-s', f'{FIREBASE_URL}/{path}.json'
+        ], capture_output=True, timeout=30)
+        return json.loads(result.stdout.decode('utf-8'))
     except: return None
 
 def firebase_put(path, data):
     try:
-        r = requests.put(f"{FIREBASE_URL}/{path}.json", json=data, timeout=30)
-        return r.status_code == 200
+        body = json.dumps(data, ensure_ascii=False)
+        result = subprocess.run([
+            'curl', '-s', '-X', 'PUT',
+            '-H', 'Content-Type: application/json',
+            '-d', body,
+            f'{FIREBASE_URL}/{path}.json'
+        ], capture_output=True, timeout=30)
+        return result.returncode == 0
     except: return False
-
-EXCLUDE = ['옛날','공지','공유','속연계','프리셋','로테','방덱','리스트','연습','일반','프로젝트','정복']
 
 def is_valid(name):
     for k in EXCLUDE:
@@ -89,7 +97,7 @@ def valid_mob(m):
     return True
 
 def first_msg(tid):
-    msgs = get(f"https://discord.com/api/v10/channels/{tid}/messages?limit=5&after=0")
+    msgs = discord_get(f"/channels/{tid}/messages?limit=5&after=0")
     if not msgs or not isinstance(msgs, list): return ""
     msgs.sort(key=lambda m: int(m.get('id',0)))
     for msg in msgs:
@@ -110,9 +118,9 @@ def main():
                 combos.add(e.get('dname','')+'|'+','.join(e.get('my',[])))
     print(f"기존: {len(combos)}개")
 
-    channels = get(f"https://discord.com/api/v10/guilds/{GUILD_ID}/channels")
+    channels = discord_get(f"/guilds/{GUILD_ID}/channels")
     if not channels or not isinstance(channels, list):
-        print("채널 가져오기 실패:", channels)
+        print("채널 가져오기 실패:", type(channels))
         return
 
     cats = {c['id']: c['name'] for c in channels if c['type'] == 4}
@@ -127,9 +135,9 @@ def main():
         threads = []
 
         if ch['type'] == 15:
-            ar = get(f"https://discord.com/api/v10/channels/{ch['id']}/threads/archived/public?limit=100")
+            ar = discord_get(f"/channels/{ch['id']}/threads/archived/public?limit=100")
             if ar and isinstance(ar, dict): threads += ar.get('threads',[])
-            ac = get(f"https://discord.com/api/v10/guilds/{GUILD_ID}/threads/active")
+            ac = discord_get(f"/guilds/{GUILD_ID}/threads/active")
             if ac and isinstance(ac, dict): threads += [t for t in ac.get('threads',[]) if t.get('parent_id')==ch['id']]
 
         for t in threads:
@@ -145,7 +153,7 @@ def main():
                 print(f"  [{tier}성] {name} / {my}")
                 new_count += 1
                 combos.add(combo)
-            time.sleep(0.15)
+            time.sleep(0.1)
         time.sleep(0.2)
 
     print(f"완료! 신규: {new_count}개")
