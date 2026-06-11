@@ -34,6 +34,8 @@ input{width:100%;background:var(--bg3);border:1px solid var(--border);border-rad
 .btn-reject{padding:5px 12px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;}
 .btn-kick{padding:5px 12px;background:#fee2e2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;}
 .empty{padding:20px;text-align:center;color:var(--dim);font-size:13px;}
+.refresh-btn{padding:6px 14px;background:var(--bg3);color:var(--dim);border:1px solid var(--border);border-radius:6px;font-size:12px;font-weight:700;cursor:pointer;}
+.countdown{font-size:11px;color:var(--dim);}
 </style>
 </head>
 <body>
@@ -62,6 +64,8 @@ input{width:100%;background:var(--bg3);border:1px solid var(--border);border-rad
       <div class="section-header">
         <h3>⏳ 가입 신청</h3>
         <span class="badge badge-pending" id="pending-count">0명</span>
+        <button class="refresh-btn" onclick="window.loadData()">🔄 새로고침</button>
+        <span class="countdown" id="countdown"></span>
       </div>
       <div class="member-list" id="pending-list">
         <div class="empty">가입 신청이 없어요</div>
@@ -103,6 +107,7 @@ window.adminLogin = function(){
     document.getElementById('login-screen').style.display='none';
     document.getElementById('main').style.display='block';
     loadData();
+    startAutoRefresh();
     setInterval(()=>{
       document.getElementById('admin-time').textContent = new Date().toLocaleTimeString('ko-KR');
     }, 1000);
@@ -119,6 +124,20 @@ function timeAgo(ts){
   const h = Math.floor(m/60);
   if(h < 24) return h+'시간 전';
   return Math.floor(h/24)+'일 전';
+}
+
+let countdownSec = 30;
+function startAutoRefresh(){
+  countdownSec = 30;
+  setInterval(()=>{
+    countdownSec--;
+    const el=document.getElementById('countdown');
+    if(el) el.textContent = countdownSec+'초 후 자동갱신';
+    if(countdownSec <= 0){
+      countdownSec = 30;
+      loadData();
+    }
+  }, 1000);
 }
 
 function loadData(){
@@ -170,6 +189,7 @@ window.kick = function(nick){
   if(!confirm(nick+' 님을 강퇴할까요?')) return;
   remove(ref(db,'approved/'+nick));
 };
+window.loadData = loadData;
 </script>
 </body>
 </html>
