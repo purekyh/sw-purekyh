@@ -82,6 +82,17 @@ input{width:100%;background:var(--bg3);border:1px solid var(--border);border-rad
       </div>
     </div>
   </div>
+  <!-- 피드백 -->
+  <div class="section">
+    <div class="section-header">
+      <h3>💌 읍소함</h3>
+      <span class="badge" style="background:#ede9fe;color:#6d28d9;" id="feedback-count">0개</span>
+      <button class="refresh-btn" onclick="window.loadData()">🔄</button>
+    </div>
+    <div class="member-list" id="feedback-list">
+      <div class="empty">읍소가 없어요</div>
+    </div>
+  </div>
 </div>
 
 <script type="module">
@@ -158,6 +169,24 @@ function loadData(){
       </div>`).join('');
   });
 
+  // 피드백
+  onValue(ref(db,'feedback'), snap=>{
+    const val = snap.val();
+    const list = document.getElementById('feedback-list');
+    const count = document.getElementById('feedback-count');
+    if(!val){list.innerHTML='<div class="empty">읍소가 없어요</div>';count.textContent='0개';return;}
+    const entries = Object.entries(val).sort((a,b)=>b[0]-a[0]); // 최신순
+    count.textContent = entries.length+'개';
+    list.innerHTML = entries.map(([key,e])=>`
+      <div class="member-row" style="align-items:flex-start;flex-direction:column;gap:6px;">
+        <div style="display:flex;align-items:center;gap:8px;width:100%">
+          <span style="font-size:12px;color:var(--dim);">${timeAgo(e.createdAt)}</span>
+          <button class="btn-reject" onclick="window.deleteFeedback('${key}')" style="margin-left:auto">삭제</button>
+        </div>
+        <div style="font-size:13px;white-space:pre-wrap;">${e.text}</div>
+      </div>`).join('');
+  });
+
   // 승인 목록
   onValue(ref(db,'approved'), snap=>{
     const val = snap.val();
@@ -190,6 +219,11 @@ window.kick = function(nick){
   remove(ref(db,'approved/'+nick));
 };
 window.loadData = loadData;
+
+window.deleteFeedback = function(key){
+  if(!confirm('삭제할까요?')) return;
+  remove(ref(db,'feedback/'+key));
+};
 </script>
 </body>
 </html>

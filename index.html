@@ -117,6 +117,16 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,'Apple SD 
 .memo-popup-close{width:100%;margin-top:16px;padding:11px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;color:var(--dim);}
 
 .empty{text-align:center;padding:60px 20px;color:var(--dim);}
+/* 피드백 */
+.feedback-btn{position:fixed;bottom:calc(24px + env(safe-area-inset-bottom));right:20px;background:#1a1d23;color:#fff;border:none;border-radius:20px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.2);z-index:90;}
+.feedback-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:210;display:none;align-items:flex-end;justify-content:center;}
+.feedback-overlay.show{display:flex;}
+.feedback-box{background:#fff;border-radius:16px 16px 0 0;width:100%;max-width:560px;padding:20px 20px calc(20px + env(safe-area-inset-bottom));}
+@media(min-width:560px){.feedback-overlay{align-items:center;padding:20px;}.feedback-box{border-radius:14px;border:1px solid var(--border);}}
+.feedback-drag{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 14px;}
+.feedback-title{font-size:15px;font-weight:800;color:var(--text);margin-bottom:6px;}
+.feedback-sub{font-size:12px;color:var(--dim);margin-bottom:14px;}
+.feedback-btns{display:flex;gap:8px;margin-top:14px;}
 /* 패치노트 팝업 */
 .patch-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:600;display:none;align-items:center;justify-content:center;padding:20px;}
 .patch-overlay.show{display:flex;}
@@ -265,6 +275,23 @@ window._loadFavs = loadFavs;
 
 <div class="content" id="content"></div>
 <div class="toast" id="toast"></div>
+
+<!-- 피드백 버튼 -->
+<button class="feedback-btn" onclick="openFeedback()">💌 순수영이에게 읍소하기</button>
+
+<!-- 피드백 모달 -->
+<div class="feedback-overlay" id="feedback-overlay" onclick="if(event.target===this)closeFeedback()">
+  <div class="feedback-box">
+    <div class="feedback-drag"></div>
+    <div class="feedback-title">💌 순수영이에게 읍소하기</div>
+    <div class="feedback-sub">추가하고 싶은 기능이나 수정하고 싶은 것 올려주세요~<br>익명으로 혼자만 볼게요 👀</div>
+    <textarea id="feedback-text" style="width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 12px;color:var(--text);font-size:16px;outline:none;resize:vertical;min-height:100px;font-family:inherit;" placeholder="자유롭게 써주세요!"></textarea>
+    <div class="feedback-btns">
+      <button style="flex:1;padding:12px;background:var(--bg3);color:var(--dim);border:1px solid var(--border2);border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;" onclick="closeFeedback()">취소</button>
+      <button style="flex:2;padding:12px;background:#1a1d23;color:#fff;border:none;border-radius:10px;font-weight:800;font-size:14px;cursor:pointer;" onclick="submitFeedback()">읍소하기 🙏</button>
+    </div>
+  </div>
+</div>
 
 <!-- 패치노트 팝업 -->
 <div class="patch-overlay" id="patch-overlay">
@@ -718,6 +745,30 @@ function doSave(){
   DB.sort((a,b)=>(RO2[a.rank]??9)-(RO2[b.rank]??9));
   saveDB(savedId);closeModal();render();
 }
+// 피드백
+function openFeedback(){
+  document.getElementById('feedback-overlay').classList.add('show');
+  setTimeout(()=>document.getElementById('feedback-text').focus(),80);
+}
+function closeFeedback(){
+  document.getElementById('feedback-overlay').classList.remove('show');
+  document.getElementById('feedback-text').value='';
+}
+function submitFeedback(){
+  const text = document.getElementById('feedback-text').value.trim();
+  if(!text){ alert('내용을 입력해주세요!'); return; }
+  if(!window._fbReady){ alert('서버 연결 중입니다.'); return; }
+  const feedbackRef = window._fbRef(window._fbDb, 'feedback/' + Date.now());
+  window._fbSet(feedbackRef, {
+    text,
+    nick: window.NICK || '익명',
+    createdAt: Date.now()
+  }).then(()=>{
+    closeFeedback();
+    showToast('💌 읍소 완료! 순수영이가 볼게요~');
+  });
+}
+
 function del(id){
   if(!confirm('삭제할까요?'))return;
   DB=DB.filter(x=>x.id!==id);
