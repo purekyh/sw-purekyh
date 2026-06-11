@@ -120,7 +120,10 @@ def main():
 
     channels = discord_get(f"/guilds/{GUILD_ID}/channels")
     if not channels or not isinstance(channels, list):
-        print("채널 가져오기 실패:", type(channels))
+        print("채널 응답 내용:", json.dumps(channels, ensure_ascii=False) if channels else "None")
+        # dict면 에러 메시지일 수 있음 - 그래도 진행 시도
+        if isinstance(channels, dict) and 'message' in channels:
+            print("에러:", channels['message'])
         return
 
     cats = {c['id']: c['name'] for c in channels if c['type'] == 4}
