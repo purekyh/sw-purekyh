@@ -10,14 +10,15 @@ GUILD_ID = "1409399655393005641"
 
 HEADERS = {
     "Authorization": f"Bot {TOKEN}",
-    "User-Agent": "DiscordBot (local, 1.0)"
+    "User-Agent": "DiscordBot (https://github.com, 1.0)",
+    "Content-Type": "application/json"
 }
 
 EXCLUDE_KEYWORDS = ['옛날', '공지', '공유', '속연계', '프리셋', '로테', '방덱', '리스트', '연습', '일반', '프로젝트', '정복']
 
 def get(url):
     while True:
-        r = requests.get(url, headers=HEADERS)
+        r = requests.get(url, headers=HEADERS, timeout=30)
         if r.status_code == 429:
             wait = r.json().get("retry_after", 1)
             print(f"  rate limit {wait:.1f}초 대기...")
