@@ -209,6 +209,7 @@ window._fbPush = push;
 window._fbRemove = remove;
 window._fbUpdate = update;
 window._fbOnValue = onValue;
+window._fbRemove = remove;
 window._fbReady = true;
 
 // DB 실시간 수신
@@ -274,16 +275,20 @@ window._loadFavs = loadFavs;
     </div>
     <div class="patch-body">
       <div class="patch-item">
-        <div class="patch-icon">🔐</div>
-        <div class="patch-text"><strong>가입 신청 / 승인 / 강퇴 시스템 추가</strong><br>웅장한 바코드인만 접근 가능!</div>
+        <div class="patch-icon">🐛</div>
+        <div class="patch-text"><strong>버그 수정</strong><br>편집 저장에서 발생하는 간헐적인 버그 수정</div>
       </div>
       <div class="patch-item">
-        <div class="patch-icon">⚠️</div>
-        <div class="patch-text"><strong>길탈 시 or 순수영이 기분에 따라</strong><br>접근 권한이 회수될 수 있음 -_-</div>
+        <div class="patch-icon">🔔</div>
+        <div class="patch-text"><strong>신규 가입 신청 시 디코에 자동메시지 출력</strong></div>
       </div>
       <div class="patch-item">
-        <div class="patch-icon">📱</div>
-        <div class="patch-text"><strong>앱 설치 지원</strong><br>홈 화면에 추가하면 앱처럼 사용 가능!</div>
+        <div class="patch-icon">⭐</div>
+        <div class="patch-text"><strong>즐겨찾기 활용 잘 해주세용~</strong></div>
+      </div>
+      <div class="patch-item">
+        <div class="patch-icon">🍗</div>
+        <div class="patch-text"><strong>오늘도 치킨각이닭!</strong></div>
       </div>
     </div>
     <div class="patch-footer">
@@ -383,12 +388,18 @@ const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,5);
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
 // Firebase 연동 저장/로드
-function saveDB(){
+function saveDB(changedId){
   if(!window._fbReady||!window.NICK) return;
-  // Firebase에 전체 덱 저장
-  const obj={};
-  DB.forEach(d=>{ obj[d.id]=d; });
-  window._fbSet(window._fbRef(window._fbDb,'jokbo'), obj);
+  if(changedId){
+    // 변경된 항목만 업데이트
+    const d = DB.find(x=>x.id===changedId);
+    if(d) window._fbSet(window._fbRef(window._fbDb,'jokbo/'+changedId), d);
+  } else {
+    // 삭제의 경우 전체 동기화
+    const obj={};
+    DB.forEach(d=>{ obj[d.id]=d; });
+    window._fbSet(window._fbRef(window._fbDb,'jokbo'), obj);
+  }
 }
 function loadDB(){
   // Firebase onValue로 실시간 수신 (firebase module에서 처리)
@@ -591,7 +602,7 @@ function render(){
 }
 
 // 패치노트
-const PATCH_VERSION = 'v26.06.11b';
+const PATCH_VERSION = 'v26.06.11c';
 function showPatchIfNew(){
   const seen = localStorage.getItem('sw-patch');
   if(seen !== PATCH_VERSION){
@@ -696,12 +707,25 @@ function doSave(){
   if(!dname){alert('상대 덱 이름을 입력해주세요.');return;}
   if(!my.length){alert('공격 멤버를 입력해주세요.');return;}
   if(!rank){alert('추천도를 선택해주세요.');return;}
-  if(eid){const i=DB.findIndex(x=>x.id===eid);if(i!==-1)DB[i]={id:eid,tier,dname,enemy,my,rank,memo};}
-  else DB.push({id:uid(),tier,dname,enemy,my,rank,memo,addedBy:window.NICK||''});
+  let savedId;
+  if(eid){
+    const i=DB.findIndex(x=>x.id===eid);
+    if(i!==-1){DB[i]={id:eid,tier,dname,enemy,my,rank,memo};savedId=eid;}
+  } else {
+    savedId=uid();
+    DB.push({id:savedId,tier,dname,enemy,my,rank,memo,addedBy:window.NICK||''});
+  }
   DB.sort((a,b)=>(RO2[a.rank]??9)-(RO2[b.rank]??9));
-  saveDB();closeModal();render();
+  saveDB(savedId);closeModal();render();
 }
-function del(id){if(!confirm('삭제할까요?'))return;DB=DB.filter(x=>x.id!==id);saveDB();render();}
+function del(id){
+  if(!confirm('삭제할까요?'))return;
+  DB=DB.filter(x=>x.id!==id);
+  if(window._fbReady&&window.NICK){
+    window._fbRemove(window._fbRef(window._fbDb,'jokbo/'+id));
+  }
+  render();
+}
 
 window.onload=()=>{
   loadDB();
