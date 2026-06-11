@@ -227,7 +227,8 @@ const jokboRef = ref(db, 'jokbo');
 onValue(jokboRef, (snapshot) => {
   const val = snapshot.val();
   if (val) {
-    window.DB = Object.values(val);
+    const RO={'1':0,'2':1,'w':2};
+    window.DB = Object.values(val).sort((a,b)=>(RO[a.rank]??9)-(RO[b.rank]??9));
     if (window._renderReady) window.render();
   }
 });
