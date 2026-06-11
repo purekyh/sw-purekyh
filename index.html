@@ -403,8 +403,19 @@ function startWithNick(){
   if(nick.length > 12){ alert('닉네임은 12자 이내로 입력해주세요.'); return; }
 
   // Firebase에서 상태 확인
+  // Firebase 준비 안 됐으면 준비될 때까지 대기
   if(!window._fbReady){
-    alert('서버 연결 중입니다. 잠시 후 다시 시도해주세요.');
+    const btn = document.querySelector('.nick-btn');
+    btn.textContent = '연결 중...';
+    btn.disabled = true;
+    const wait = setInterval(()=>{
+      if(window._fbReady){
+        clearInterval(wait);
+        btn.textContent = '시작하기';
+        btn.disabled = false;
+        startWithNick();
+      }
+    }, 200);
     return;
   }
 
@@ -431,6 +442,12 @@ function startWithNick(){
           // 신규 신청
           window._fbSet(pendingRef, { nick, requestedAt: Date.now() });
           showWaiting(nick);
+          // 디스코드 웹훅 알림
+          fetch('https://discord.com/api/webhooks/1514564409681510481/P3V4KOdQ0SUSocXCd5xIgPjtTnlbNbgivr0Sd6qk4GuzofgthhNYZBmASxWanr6s_vgC', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({content: '⚔️ **' + nick + '** 님이 점령치킨각에 가입 신청했어요!\n👉 승인: https://purekyh.github.io/sw-purekyh/admin.html'})
+          }).catch(()=>{});
         }
       }, {onlyOnce: true});
     }
