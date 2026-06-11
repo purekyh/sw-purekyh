@@ -229,7 +229,8 @@ onValue(jokboRef, (snapshot) => {
   if (val) {
     const RO={'1':0,'2':1,'w':2};
     window.DB = Object.values(val).sort((a,b)=>(RO[a.rank]??9)-(RO[b.rank]??9));
-    if (window._renderReady) window.render();
+    // _renderReady 여부 관계없이 항상 render
+    window.render();
   }
 });
 
