@@ -310,20 +310,12 @@ window._loadFavs = loadFavs;
     </div>
     <div class="patch-body">
       <div class="patch-item">
-        <div class="patch-icon">🐛</div>
-        <div class="patch-text"><strong>버그 수정</strong><br>편집 저장에서 발생하는 간헐적인 버그 수정</div>
+        <div class="patch-icon">⚡</div>
+        <div class="patch-text"><strong>디스코드 동기화 주기를 1시간으로 당겼어요.</strong><br>매시 정각에 동기화 합니다.</div>
       </div>
       <div class="patch-item">
-        <div class="patch-icon">🔔</div>
-        <div class="patch-text"><strong>신규 가입 신청 시 디코에 자동메시지 출력</strong></div>
-      </div>
-      <div class="patch-item">
-        <div class="patch-icon">⭐</div>
-        <div class="patch-text"><strong>즐겨찾기 활용 잘 해주세용~</strong></div>
-      </div>
-      <div class="patch-item">
-        <div class="patch-icon">🍗</div>
-        <div class="patch-text"><strong>오늘도 치킨각이닭!</strong></div>
+        <div class="patch-icon">🏆</div>
+        <div class="patch-text"><strong>바코드 우승각 화이팅!</strong></div>
       </div>
     </div>
     <div class="patch-footer">
@@ -658,7 +650,7 @@ function render(){
 }
 
 // 패치노트
-const PATCH_VERSION = 'v26.06.11c';
+const PATCH_VERSION = 'v26.06.11d';
 function showPatchIfNew(){
   const seen = localStorage.getItem('sw-patch');
   if(seen !== PATCH_VERSION){
