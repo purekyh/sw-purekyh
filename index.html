@@ -34,6 +34,8 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,'Apple SD 
 .toolbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:9px 16px;position:sticky;top:53px;z-index:99;}
 .search-box{background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:8px 13px;color:var(--text);font-size:16px;outline:none;width:100%;max-width:320px;-webkit-appearance:none;transition:border-color .15s;}
 .search-box:focus{border-color:#1a1d23;}
+.quick-link{padding:7px 12px;background:var(--bg3);color:var(--dim);border:1px solid var(--border2);border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none;white-space:nowrap;display:inline-flex;align-items:center;gap:5px;}
+.quick-link:hover{background:var(--bg4);color:var(--text);}
 
 /* 콘텐츠 */
 .content{padding:20px 16px 40px;max-width:1100px;margin:0 auto;}
@@ -277,8 +279,9 @@ window._loadFavs = loadFavs;
   </div>
 </div>
 
-<div class="toolbar">
-  <input class="search-box" type="search" placeholder="🔍 덱 이름 또는 상대 몹 검색" oninput="render()" autocorrect="off" autocapitalize="off">
+<div class="toolbar" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+  <input class="search-box" type="search" placeholder="🔍 덱 이름 · 상대 몹 · 공격 몹 검색" oninput="render()" autocorrect="off" autocapitalize="off">
+  <a class="quick-link" href="https://www.ryhlab.com/speed" target="_blank">⚡ 동봇</a>
 </div>
 
 <div class="content" id="content"></div>
@@ -310,12 +313,16 @@ window._loadFavs = loadFavs;
     </div>
     <div class="patch-body">
       <div class="patch-item">
-        <div class="patch-icon">⚡</div>
-        <div class="patch-text"><strong>디스코드 동기화 주기를 1시간으로 당겼어요.</strong><br>매시 정각에 동기화 합니다.</div>
+        <div class="patch-icon">🔍</div>
+        <div class="patch-text"><strong>공격 몹으로도 검색 가능!</strong><br>"내가 빛페른 먹었는데 어디 쓰지?" 이런 검색 가능합니다.</div>
       </div>
       <div class="patch-item">
-        <div class="patch-icon">🏆</div>
-        <div class="patch-text"><strong>바코드 우승각 화이팅!</strong></div>
+        <div class="patch-icon">✨</div>
+        <div class="patch-text"><strong>상대덱 이름 자동완성 기능 추가</strong></div>
+      </div>
+      <div class="patch-item">
+        <div class="patch-icon">⚡</div>
+        <div class="patch-text"><strong>자주 방문하는 사이트 (동봇) 퀵 버튼 추가</strong></div>
       </div>
     </div>
     <div class="patch-footer">
@@ -349,7 +356,10 @@ window._loadFavs = loadFavs;
     <div class="modal-drag"></div>
     <div class="modal-title" id="mtitle">조합 추가</div>
     <label class="flabel">상대 덱 이름</label>
-    <input type="text" id="f-dname" placeholder="예: 주브늑, 에머수">
+    <div style="position:relative">
+    <input type="text" id="f-dname" placeholder="예: 주브늑, 에머수" oninput="dnameSuggest(this)" onblur="setTimeout(()=>closeDnameSuggest(),180)" autocomplete="off">
+    <div id="dname-ac" style="position:absolute;top:calc(100% + 4px);left:0;right:0;background:#fff;border:1px solid #1a1d23;border-radius:8px;z-index:302;max-height:150px;overflow-y:auto;display:none;box-shadow:0 4px 12px rgba(0,0,0,.1);"></div>
+  </div>
     <label class="flabel">상대 덱 몹 (최대 3마리)</label>
     <div class="mins" id="enemy-ins"></div>
     <label class="flabel">공격 멤버 (최대 3마리)</label>
@@ -650,7 +660,7 @@ function render(){
 }
 
 // 패치노트
-const PATCH_VERSION = 'v26.06.11d';
+const PATCH_VERSION = 'v26.07.08';
 function showPatchIfNew(){
   const seen = localStorage.getItem('sw-patch');
   if(seen !== PATCH_VERSION){
@@ -766,6 +776,29 @@ function doSave(){
   DB.sort((a,b)=>(RO2[a.rank]??9)-(RO2[b.rank]??9));
   saveDB(savedId);closeModal();render();
 }
+// 상대덱 이름 자동완성
+function dnameSuggest(inp){
+  const q = inp.value.trim().toLowerCase();
+  const ac = document.getElementById('dname-ac');
+  if(!q){ ac.style.display='none'; return; }
+  // 기존 덱 이름 목록에서 검색
+  const names = [...new Set(DB.map(d=>d.dname))].filter(n=>n.toLowerCase().includes(q)).slice(0,8);
+  if(!names.length){ ac.style.display='none'; return; }
+  ac.innerHTML = names.map(n=>`<div style="padding:10px 12px;font-size:14px;cursor:pointer;color:#1a1d23;" onmousedown="pickDname('${esc(n)}')">${esc(n)}</div>`).join('');
+  ac.style.display='block';
+}
+function pickDname(name){
+  document.getElementById('f-dname').value = name;
+  document.getElementById('dname-ac').style.display='none';
+  // 기존 덱의 상대몹 자동 채우기
+  const sample = DB.find(d=>d.dname===name&&d.tier===tier);
+  if(sample) buildIns('enemy-ins', sample.enemy||[]);
+}
+function closeDnameSuggest(){
+  const ac = document.getElementById('dname-ac');
+  if(ac) ac.style.display='none';
+}
+
 // 피드백
 function openFeedback(){
   document.getElementById('feedback-overlay').classList.add('show');
