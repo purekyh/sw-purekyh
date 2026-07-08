@@ -1,5 +1,6 @@
 """
-dc_auto_ 항목 삭제 후 재동기화
+점령전 족보 디스코드 자동 동기화
+매시 정각 실행
 """
 import json, time, re, os
 import http.client
@@ -13,9 +14,9 @@ EXCLUDE = ['옛날','공지','공유','속연계','프리셋','로테','방덱',
 def discord_request(path):
     while True:
         try:
-            import ssl
+            import ssl, socket
             ctx = ssl.create_default_context()
-            s = __import__('socket').create_connection(("discord.com", 443), timeout=30)
+            s = socket.create_connection(("discord.com", 443), timeout=30)
             ss = ctx.wrap_socket(s, server_hostname="discord.com")
             auth_token = "Bot " + TOKEN
             request = f"GET /api/v10{path} HTTP/1.1\r\nHost: discord.com\r\nUser-Agent: python-bot\r\nConnection: close\r\n"
@@ -82,17 +83,6 @@ def fb_put(path, data):
         return res.status == 200
     except: return False
 
-def fb_delete(path):
-    try:
-        fb_host = FIREBASE_URL.replace("https://", "")
-        conn = http.client.HTTPSConnection(fb_host)
-        conn.request("DELETE", f"/{path}.json")
-        res = conn.getresponse()
-        res.read()
-        conn.close()
-        return res.status == 200
-    except: return False
-
 def is_valid(name):
     for k in EXCLUDE:
         if k in name: return False
@@ -100,7 +90,6 @@ def is_valid(name):
 
 def parse_mobs(text):
     if not text: return []
-    import re
     if '/' in text or ',' in text:
         parts = [p.strip() for p in re.split(r'[/,]', text) if p.strip()]
         if len(parts) >= 2: return parts[:3]
@@ -121,14 +110,12 @@ def parse_mobs(text):
 
 def clean(memo):
     if not memo: return ''
-    import re
     memo = re.sub(r'<@[!&]?\d+>', '', memo)
     memo = re.sub(r'<#\d+>', '', memo)
     memo = re.sub(r'<a?:\w+:\d+>', '', memo)
     return re.sub(r'\n{3,}', '\n\n', memo).strip()
 
 def valid_mob(m):
-    import re
     m = m.strip('-').strip()
     if not m or len(m) < 2 or len(m) > 8: return False
     if re.search(r'<[@#]|\d{10,}', m): return False
@@ -148,25 +135,14 @@ def tier_from_cat(name):
     return 4 if name and '4성' in name else 5
 
 def main():
-    print("=== STEP 1: dc_auto_ 항목 삭제 ===")
+    print("=== 디스코드 족보 동기화 시작 ===")
     existing = fb_get('jokbo')
-    deleted = 0
-    if existing and isinstance(existing, dict):
-        for key, entry in existing.items():
-            if key.startswith('dc_auto_'):
-                if fb_delete(f'jokbo/{key}'):
-                    deleted += 1
-    print(f"삭제 완료: {deleted}개")
-
-    print("\n=== STEP 2: 디스코드 재동기화 ===")
-    # 남은 수동 항목들의 combo 목록
-    remaining = fb_get('jokbo')
     combos = set()
-    if remaining and isinstance(remaining, dict):
-        for e in remaining.values():
+    if existing and isinstance(existing, dict):
+        for e in existing.values():
             if isinstance(e, dict):
                 combos.add(e.get('dname','')+'|'+','.join(e.get('my',[])))
-    print(f"수동 항목 유지: {len(combos)}개")
+    print(f"기존: {len(combos)}개")
 
     channels = discord_request(f"/guilds/{GUILD_ID}/channels")
     if not channels or not isinstance(channels, list):
@@ -206,7 +182,7 @@ def main():
             time.sleep(0.1)
         time.sleep(0.2)
 
-    print(f"\n완료! 신규 추가: {new_count}개")
+    print(f"완료! 신규: {new_count}개")
 
 if __name__ == "__main__":
     main()
