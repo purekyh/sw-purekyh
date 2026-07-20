@@ -309,20 +309,16 @@ window._loadFavs = loadFavs;
   <div class="patch-box">
     <div class="patch-header">
       <div class="patch-header-top">⚔ 점령전 족보 업데이트</div>
-      <div class="patch-version">v26.06.11</div>
+      <div class="patch-version">v26.07.20</div>
     </div>
     <div class="patch-body">
       <div class="patch-item">
-        <div class="patch-icon">🔍</div>
-        <div class="patch-text"><strong>공격 몹으로도 검색 가능!</strong><br>"내가 빛페른 먹었는데 어디 쓰지?" 이런 검색 가능합니다.</div>
+        <div class="patch-icon">🏆</div>
+        <div class="patch-text"><strong>바코드의 당연한 우승을 당연히 축하합니다! =ㅁ=</strong></div>
       </div>
       <div class="patch-item">
-        <div class="patch-icon">✨</div>
-        <div class="patch-text"><strong>상대덱 이름 자동완성 기능 추가</strong></div>
-      </div>
-      <div class="patch-item">
-        <div class="patch-icon">⚡</div>
-        <div class="patch-text"><strong>자주 방문하는 사이트 (동봇) 퀵 버튼 추가</strong></div>
+        <div class="patch-icon">🎯</div>
+        <div class="patch-text"><strong>1순위 / 2순위 텍스트 정보 인식하여 자동으로 매핑</strong><br>디스코드 제목의 순위 표시를 자동으로 인식해요.</div>
       </div>
     </div>
     <div class="patch-footer">
@@ -660,7 +656,7 @@ function render(){
 }
 
 // 패치노트
-const PATCH_VERSION = 'v26.07.08';
+const PATCH_VERSION = 'v26.07.20';
 function showPatchIfNew(){
   const seen = localStorage.getItem('sw-patch');
   if(seen !== PATCH_VERSION){
