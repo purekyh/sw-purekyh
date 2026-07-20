@@ -89,36 +89,26 @@ def is_valid(name):
     return len([p for p in name.split('-') if p.strip()]) >= 2
 
 def extract_rank(text):
-    """제목에서 순위 추출: '1순위', '2순위', '날빌' 등"""
     if not text: return '1'
     t = text.lower()
-    # 날빌/날빌성
     if '날빌' in t: return 'w'
-    # 2순위
     if '2순위' in t or '2위' in t: return '2'
-    # 1순위 (기본)
     return '1'
 
 def strip_rank_prefix(text):
-    """제목에서 순위 표시 제거 후 몹 이름만 추출"""
     if not text: return text
-    # '1순위)', '2순위)', '[1순위]', '[2순위]' 등 제거
     text = re.sub(r'[\[\(]?[12날]순위[\]\)]?\s*[\)\]]?', '', text, flags=re.IGNORECASE)
     text = re.sub(r'[\[\(]?날빌[성]?[\]\)]?\s*', '', text, flags=re.IGNORECASE)
-    # '[1순위]', '[2순위]' 대괄호 형태
     text = re.sub(r'\[[12]순위\]', '', text)
-    text = text.strip(' -,/')
-    return text
+    return text.strip(' -,/')
 
 def parse_mobs(text):
     if not text: return []
-    # 순위 표시 제거 후 파싱
     text = strip_rank_prefix(text)
     if not text: return []
     if '/' in text or ',' in text:
         parts = [p.strip() for p in re.split(r'[/,]', text) if p.strip()]
         if len(parts) >= 2: return parts[:3]
-    # 하이픈 구분
     if ' - ' in text or '-' in text:
         parts = [p.strip() for p in re.split(r'\s*-\s*', text) if p.strip()]
         if len(parts) >= 2: return parts[:3]
@@ -142,7 +132,10 @@ def clean(memo):
     memo = re.sub(r'<@[!&]?\d+>', '', memo)
     memo = re.sub(r'<#\d+>', '', memo)
     memo = re.sub(r'<a?:\w+:\d+>', '', memo)
-    return re.sub(r'\n{3,}', '\n\n', memo).strip()
+    return re.sub(r'
+{3,}', '
+
+', memo).strip()
 
 def valid_mob(m):
     m = m.strip('-').strip()
@@ -163,37 +156,15 @@ def first_msg(tid):
 def tier_from_cat(name):
     return 4 if name and '4성' in name else 5
 
-def fb_delete(path):
-    try:
-        fb_host = FIREBASE_URL.replace("https://", "")
-        conn = http.client.HTTPSConnection(fb_host)
-        conn.request("DELETE", f"/{path}.json")
-        res = conn.getresponse()
-        res.read()
-        conn.close()
-        return res.status == 200
-    except: return False
-
 def main():
-    print("=== STEP 1: dc_auto_ 항목 삭제 ===")
-    existing_all = fb_get('jokbo')
-    deleted = 0
-    if existing_all and isinstance(existing_all, dict):
-        for key in list(existing_all.keys()):
-            if key.startswith('dc_auto_'):
-                if fb_delete(f'jokbo/{key}'):
-                    deleted += 1
-    print(f"삭제 완료: {deleted}개")
-
-    print("\n=== STEP 2: 디스코드 재동기화 ===")
-    # 남은 수동 항목들
-    remaining = fb_get('jokbo')
+    print("=== 디스코드 족보 동기화 시작 ===")
+    existing = fb_get('jokbo')
     combos = set()
-    if remaining and isinstance(remaining, dict):
-        for e in remaining.values():
+    if existing and isinstance(existing, dict):
+        for e in existing.values():
             if isinstance(e, dict):
                 combos.add(e.get('dname','')+'|'+','.join(e.get('my',[])))
-    print(f"수동 항목 유지: {len(combos)}개")
+    print(f"기존: {len(combos)}개")
 
     channels = discord_request(f"/guilds/{GUILD_ID}/channels")
     if not channels or not isinstance(channels, list):
@@ -218,17 +189,18 @@ def main():
             if ac and isinstance(ac, dict): threads += [t for t in ac.get('threads',[]) if t.get('parent_id')==ch['id']]
 
         for t in threads:
-            my = parse_mobs(t.get('name',''))
+            title = t.get('name','')
+            rank = extract_rank(title)
+            my = parse_mobs(title)
             my = [m.strip('-') for m in my if valid_mob(m.strip('-'))]
             if not my: continue
             combo = name+'|'+','.join(my)
             if combo in combos: continue
             memo = clean(first_msg(t['id']))
             eid = f"dc_auto_{t['id']}"
-            rank = extract_rank(t.get('name',''))
             entry = {"id":eid,"tier":tier,"dname":name,"enemy":enemy,"my":my,"rank":rank,"memo":memo,"addedBy":"auto-sync"}
             if fb_put(f"jokbo/{eid}", entry):
-                print(f"  [{tier}성] {name} / {my}")
+                print(f"  [{tier}성/{rank}순위] {name} / {my}")
                 new_count += 1
                 combos.add(combo)
             time.sleep(0.1)
