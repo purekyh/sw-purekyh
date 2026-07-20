@@ -97,10 +97,11 @@ def extract_rank(text):
 
 def strip_rank_prefix(text):
     if not text: return text
-    text = re.sub(r'[\[\(]?[12날]순위[\]\)]?\s*[\)\]]?', '', text, flags=re.IGNORECASE)
-    text = re.sub(r'[\[\(]?날빌[성]?[\]\)]?\s*', '', text, flags=re.IGNORECASE)
-    text = re.sub(r'\[[12]순위\]', '', text)
-    return text.strip(' -,/')
+    # 1순위), 2순위), [1순위], [2순위] 등 제거
+    text = re.sub(r'[12]순위', '', text)
+    text = re.sub(r'날빌성?', '', text)
+    text = text.strip(' -,[]()')
+    return text
 
 def parse_mobs(text):
     if not text: return []
@@ -132,10 +133,8 @@ def clean(memo):
     memo = re.sub(r'<@[!&]?\d+>', '', memo)
     memo = re.sub(r'<#\d+>', '', memo)
     memo = re.sub(r'<a?:\w+:\d+>', '', memo)
-    return re.sub(r'
-{3,}', '
-
-', memo).strip()
+    memo = re.sub(r'\n{3,}', '\n\n', memo)
+    return memo.strip()
 
 def valid_mob(m):
     m = m.strip('-').strip()
