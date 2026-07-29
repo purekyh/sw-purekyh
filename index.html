@@ -125,6 +125,10 @@ body{background:var(--bg);color:var(--text);font-family:-apple-system,'Apple SD 
 .memo-popup-close{width:100%;margin-top:16px;padding:11px;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;color:var(--dim);}
 
 .empty{text-align:center;padding:60px 20px;color:var(--dim);}
+.search-divider{margin:28px 0 20px;text-align:center;}
+.search-divider-inner{display:inline-flex;align-items:center;gap:10px;background:#1a1d23;color:#fff;border-radius:20px;padding:8px 20px;font-size:13px;font-weight:800;letter-spacing:0.5px;}
+.search-divider-line{display:none;}
+.search-divider-label{color:#fff;}
 /* 피드백 */
 .feedback-btn{position:fixed;bottom:calc(24px + env(safe-area-inset-bottom));right:20px;background:#1a1d23;color:#fff;border:none;border-radius:20px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.2);z-index:90;}
 .feedback-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:210;display:none;align-items:flex-end;justify-content:center;}
@@ -582,9 +586,14 @@ function render(){
   const q=(document.querySelector('.search-box').value||'').trim().toLowerCase();
   const cont=document.getElementById('content');
   // 검색어 있으면 전체 tier에서, 없으면 현재 tier만
+  // 상대덱 매칭 (덱이름 + 상대몹)
   let list = q
     ? DB.filter(d=>d.dname.toLowerCase().includes(q)||(d.enemy||[]).some(m=>m.toLowerCase().includes(q)))
     : DB.filter(d=>d.tier===tier);
+  // 공격몹 매칭 (별도)
+  let myList = q
+    ? DB.filter(d=>(d.my||[]).some(m=>m.toLowerCase().includes(q)) && !list.includes(d))
+    : [];
 
   const groups={},order=[];
   list.forEach(d=>{
@@ -653,6 +662,35 @@ function render(){
       <div class="card-grid">${cards}</div>
     </div>`;
   }).join('');
+
+  // 공격몹 매칭 결과 추가
+  if(myList.length > 0){
+    const myGroups={}, myOrder=[];
+    myList.forEach(d=>{
+      if(!myGroups[d.dname]){myGroups[d.dname]={enemy:d.enemy||[],combos:[]};myOrder.push(d.dname);}
+      myGroups[d.dname].combos.push(d);
+    });
+
+    const divider = '<div class="search-divider"><div class="search-divider-inner">🗡 공격 멤버로 사용하는 덱</div></div>';
+
+    const myHtml = myOrder.map(dname=>{
+      const g=myGroups[dname];
+      const combos=g.combos.slice().sort((a,b)=>(RO[a.rank]??9)-(RO[b.rank]??9));
+      const enemyChips=g.enemy.length
+        ? g.enemy.map(m=>`<span class="chip-enemy ${attrClass(m)}">${esc(m)}</span>`).join('')
+        : `<span class="chip-none">상대 몹 미입력</span>`;
+      const cards=combos.map(d=>{
+        const myChips=d.my.map(m=>`<span class="chip-my ${attrClass(m)}">${esc(m)}</span>`).join('');
+        const rawMemo=(d.memo||'').replace(/\\n/g,'\n');
+        const LIMIT=60;
+        const memoHtml=rawMemo?(rawMemo.length>LIMIT?`<div class="card-memo memo-short">${esc(rawMemo)}</div><span class="memo-more-btn" onclick="showMemo('${d.id}')">더보기 ▾</span>`:`<div class="card-memo">${esc(rawMemo)}</div>`):'';
+        return `<div class="card"><div class="card-top-bar ${TB[d.rank]||''}"></div><button class="card-menu-btn" onclick="toggleMenu(event,'mx-${d.id}')">⋯</button><div class="card-menu-dropdown" id="mx-${d.id}"><div class="card-menu-item edit" onclick="closeMenus();openModal('${d.id}')">✏ 편집</div><div class="card-menu-item del" onclick="closeMenus();del('${d.id}')">삭제</div></div><div class="card-body"><div class="card-rank-row"><span class="rbadge ${RC[d.rank]}">${RL[d.rank]}</span></div><div class="chips">${myChips}</div>${memoHtml}</div></div>`;
+      }).join('');
+      return `<div class="group-block"><div class="group-header"><span class="group-name">${esc(dname)}</span><button class="fav-btn ${FAVS.has(dname)?'on':''}" onclick="toggleFav('${esc(dname)}')">${FAVS.has(dname)?'⭐':'☆'}</button><div class="enemy-chips">${enemyChips}</div><div class="group-sep"></div></div><div class="card-grid">${cards}</div></div>`;
+    }).join('');
+
+    cont.innerHTML += divider + myHtml;
+  }
 }
 
 // 패치노트
