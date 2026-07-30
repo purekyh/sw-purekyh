@@ -690,7 +690,9 @@ function render(){
       return `<div class="group-block"><div class="group-header"><span class="group-name">${esc(dname)}</span><button class="fav-btn ${FAVS.has(dname)?'on':''}" onclick="toggleFav('${esc(dname)}')">${FAVS.has(dname)?'⭐':'☆'}</button><div class="enemy-chips">${enemyChips}</div><div class="group-sep"></div></div><div class="card-grid">${cards}</div></div>`;
     }).join('');
 
-    cont.innerHTML += divider + myHtml;
+    const mySection = document.createElement('div');
+    mySection.innerHTML = divider + myHtml;
+    cont.appendChild(mySection);
   }
 }
 
