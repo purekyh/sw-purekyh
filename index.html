@@ -586,13 +586,14 @@ function render(){
   const q=(document.querySelector('.search-box').value||'').trim().toLowerCase();
   const cont=document.getElementById('content');
   // 검색어 있으면 전체 tier에서, 없으면 현재 tier만
-  // 상대덱 매칭 (덱이름 + 상대몹)
+  // 상대덱 매칭 (덱이름 + 상대몹) - 검색 시 전체 tier
   let list = q
     ? DB.filter(d=>d.dname.toLowerCase().includes(q)||(d.enemy||[]).some(m=>m.toLowerCase().includes(q)))
     : DB.filter(d=>d.tier===tier);
-  // 공격몹 매칭 (별도)
+  // 공격몹 매칭 (별도) - 전체 tier에서 검색, 상대덱 결과와 중복 제외
+  const listIds = new Set(list.map(d=>d.id));
   let myList = q
-    ? DB.filter(d=>(d.my||[]).some(m=>m.toLowerCase().includes(q)) && !list.includes(d))
+    ? DB.filter(d=>(d.my||[]).some(m=>m.toLowerCase().includes(q)) && !listIds.has(d.id))
     : [];
 
   const groups={},order=[];
