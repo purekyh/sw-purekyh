@@ -608,7 +608,7 @@ function render(){
     return fa-fb;
   });
 
-  if(!order.length){
+  if(!order.length && !myList.length){
     cont.innerHTML='<div class="empty"><div class="ico">📭</div>조합이 없어요.<br><b>+ 추가</b>로 시작하세요.</div>';
     return;
   }
