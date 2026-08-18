@@ -1,6 +1,6 @@
 """
 점령전 족보 디스코드 자동 동기화
-매시 정각 실행
+매시 정각 실행 - 기존 게시물 수정 반영 + 순위 파싱 보완
 """
 import json, time, re, os
 import http.client
@@ -88,20 +88,28 @@ def is_valid(name):
         if k in name: return False
     return len([p for p in name.split('-') if p.strip()]) >= 2
 
-def extract_rank(text):
-    if not text: return '1'
-    t = text.lower()
+def extract_rank(title, memo=''):
+    """제목 + 본문에서 순위 추출. 둘 다 있으면 낮은 순위(2순위) 우선"""
+    combined = (title + ' ' + memo).lower()
+    has_1 = '1순위' in combined or '1위' in combined
+    has_2 = '2순위' in combined or '2위' in combined
+    has_nal = '날빌' in combined
+
+    if has_nal: return 'w'
+    if has_2: return '2'   # 1+2 같이 있어도 2순위
+    if has_1: return '1'
+
+    # 제목에서만 판단
+    t = title.lower()
     if '날빌' in t: return 'w'
     if '2순위' in t or '2위' in t: return '2'
     return '1'
 
 def strip_rank_prefix(text):
     if not text: return text
-    # 1순위), 2순위), [1순위], [2순위] 등 제거
     text = re.sub(r'[12]순위', '', text)
     text = re.sub(r'날빌성?', '', text)
-    text = text.strip(' -,[]()')
-    return text
+    return text.strip(' -,[]()')
 
 def parse_mobs(text):
     if not text: return []
@@ -158,12 +166,20 @@ def tier_from_cat(name):
 def main():
     print("=== 디스코드 족보 동기화 시작 ===")
     existing = fb_get('jokbo')
-    combos = set()
+
+    # 기존 dc_auto_ 항목을 thread_id 기준으로 맵핑
+    thread_to_entry = {}
+    combo_to_id = {}
     if existing and isinstance(existing, dict):
-        for e in existing.values():
+        for key, e in existing.items():
             if isinstance(e, dict):
-                combos.add(e.get('dname','')+'|'+','.join(e.get('my',[])))
-    print(f"기존: {len(combos)}개")
+                if key.startswith('dc_auto_'):
+                    tid = key.replace('dc_auto_', '')
+                    thread_to_entry[tid] = e
+                combo = e.get('dname','') + '|' + ','.join(e.get('my',[]))
+                combo_to_id[combo] = key
+
+    print(f"기존: {len(existing) if existing else 0}개 (dc_auto_: {len(thread_to_entry)}개)")
 
     channels = discord_request(f"/guilds/{GUILD_ID}/channels")
     if not channels or not isinstance(channels, list):
@@ -175,6 +191,8 @@ def main():
     print(f"유효 채널: {len(target)}개")
 
     new_count = 0
+    updated_count = 0
+
     for ch in target:
         name = ch['name']
         tier = tier_from_cat(cats.get(ch.get('parent_id'),''))
@@ -189,23 +207,42 @@ def main():
 
         for t in threads:
             title = t.get('name','')
-            rank = extract_rank(title)
+            tid = t['id']
+            eid = f"dc_auto_{tid}"
+
             my = parse_mobs(title)
             my = [m.strip('-') for m in my if valid_mob(m.strip('-'))]
             if not my: continue
-            combo = name+'|'+','.join(my)
-            if combo in combos: continue
-            memo = clean(first_msg(t['id']))
-            eid = f"dc_auto_{t['id']}"
+
+            memo = clean(first_msg(tid))
+            rank = extract_rank(title, memo)
+
+            # 기존 항목 있으면 업데이트 체크
+            if tid in thread_to_entry:
+                old_e = thread_to_entry[tid]
+                if (old_e.get('memo','') != memo or
+                    old_e.get('rank','1') != rank or
+                    old_e.get('my',[]) != my):
+                    entry = {**old_e, "my": my, "rank": rank, "memo": memo}
+                    if fb_put(f"jokbo/{eid}", entry):
+                        print(f"  [업데이트] [{tier}성/{rank}순위] {name} / {my}")
+                        updated_count += 1
+                continue
+
+            # 신규 항목
+            combo = name + '|' + ','.join(my)
+            if combo in combo_to_id: continue
+
             entry = {"id":eid,"tier":tier,"dname":name,"enemy":enemy,"my":my,"rank":rank,"memo":memo,"addedBy":"auto-sync"}
             if fb_put(f"jokbo/{eid}", entry):
-                print(f"  [{tier}성/{rank}순위] {name} / {my}")
+                print(f"  [신규] [{tier}성/{rank}순위] {name} / {my}")
                 new_count += 1
-                combos.add(combo)
+                combo_to_id[combo] = eid
+
             time.sleep(0.1)
         time.sleep(0.2)
 
-    print(f"완료! 신규: {new_count}개")
+    print(f"\n완료! 신규: {new_count}개, 업데이트: {updated_count}개")
 
 if __name__ == "__main__":
     main()

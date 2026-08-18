@@ -313,16 +313,16 @@ window._loadFavs = loadFavs;
   <div class="patch-box">
     <div class="patch-header">
       <div class="patch-header-top">⚔ 점령전 족보 업데이트</div>
-      <div class="patch-version">v26.07.27</div>
+      <div class="patch-version">v26.08.18</div>
     </div>
     <div class="patch-body">
       <div class="patch-item">
-        <div class="patch-icon">🏆</div>
-        <div class="patch-text"><strong>바코드의 당연한 시즌 우승을 축하합니다!</strong></div>
+        <div class="patch-icon">🔄</div>
+        <div class="patch-text"><strong>기존 게시물이 수정되더라도 찾아서 씽크를 맞추도록 조정</strong><br>디스코드 원본 수정 시 자동으로 반영돼요.</div>
       </div>
       <div class="patch-item">
-        <div class="patch-icon">😤</div>
-        <div class="patch-text"><strong>이번 새 시즌도 역시 우리의 우승각 ㅎ_ㅎ!</strong></div>
+        <div class="patch-icon">🎯</div>
+        <div class="patch-text"><strong>우선 순위 언급에 대해 매칭 보완</strong><br>본문에서도 1순위/2순위 인식, 둘 다 있으면 2순위로.</div>
       </div>
     </div>
     <div class="patch-footer">
@@ -697,7 +697,7 @@ function render(){
 }
 
 // 패치노트
-const PATCH_VERSION = 'v26.07.27';
+const PATCH_VERSION = 'v26.08.18';
 function showPatchIfNew(){
   const seen = localStorage.getItem('sw-patch');
   if(seen !== PATCH_VERSION){
